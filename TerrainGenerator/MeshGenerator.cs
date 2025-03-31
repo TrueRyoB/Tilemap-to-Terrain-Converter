@@ -10,23 +10,25 @@ namespace Fujin.TerrainGenerator
         {
             if (vertices == null || vertices.Count < 3)
             {
-                Debug.LogError("頂点数が不足しています。");
+                Debug.LogError("The number of vertices must be more than or equal to 3");
                 return null;
             }
 
             Mesh mesh = new Mesh();
+            
+            // Copy the vertices while converting them to Vector3 from Vector2
             Vector3[] meshVertices = new Vector3[vertices.Count];
             for (int i = 0; i < vertices.Count; i++)
             {
                 meshVertices[i] = new Vector3(vertices[i].x, vertices[i].y, 0);
             }
 
-            // ⭐️ Ear Clipping で三角形を作成
+            
             List<int> triangles = Triangulate(vertices);
 
             if (triangles == null || triangles.Count < 3)
             {
-                Debug.LogError("三角形の生成に失敗しました。");
+                Debug.LogError("Failed to generate triangles");
                 return null;
             }
 
@@ -36,8 +38,8 @@ namespace Fujin.TerrainGenerator
             // 法線とUV計算
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            mesh.uv = vertices.Select(v => new Vector2(v.x, v.y)).ToArray();
-
+            mesh.uv = vertices.Select(v => Vector2.zero).ToArray(); //TODO: 面倒なので省略
+            
             return mesh;
         }
 
@@ -130,13 +132,9 @@ namespace Fujin.TerrainGenerator
         }
 
 
-        // 三角形の面積
         private static float TriangleArea(Vector2 a, Vector2 b, Vector2 c)
-        {
-            return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-        }
-
-        // 点が三角形の内側か判定
+            => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        
         private static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
         {
             float area = Mathf.Abs(TriangleArea(A, B, C));
@@ -151,7 +149,7 @@ namespace Fujin.TerrainGenerator
         {
             if (mesh2D == null || mesh2D.vertexCount == 0)
             {
-                Debug.LogError("2Dメッシュが無効です。");
+                Debug.LogError("Error: Passed mesh is invalid!");
                 return null;
             }
 
@@ -160,47 +158,44 @@ namespace Fujin.TerrainGenerator
 
             int vertexCount = vertices2D.Length;
             Vector3[] vertices3D = new Vector3[vertexCount * 2];
-            int[] triangles3D = new int[triangles2D.Length * 2 + vertexCount * 6];
-
-            // 前面・背面の頂点作成
+            int[] triangles3D = new int[triangles2D.Length * 2 + vertexCount * 6]; // (front + back) + (a pair of triangles for side)
+            
             for (int i = 0; i < vertexCount; i++)
             {
-                vertices3D[i] = vertices2D[i];                            // 前面
-                vertices3D[i + vertexCount] = vertices2D[i] + new Vector3(0, 0, -depth); // 背面
+                vertices3D[i] = vertices2D[i]; // Front
+                vertices3D[i + vertexCount] = vertices2D[i] + new Vector3(0, 0, -depth); // Back
             }
 
-            // 前面と背面の三角形
             for (int i = 0; i < triangles2D.Length; i += 3)
             {
-                // 前面（元の順序）
+                // Front
                 triangles3D[i] = triangles2D[i];
                 triangles3D[i + 1] = triangles2D[i + 1];
                 triangles3D[i + 2] = triangles2D[i + 2];
 
-                // 背面（逆回転で修正）
+                // Back (reversed)
                 triangles3D[triangles2D.Length + i] = triangles2D[i] + vertexCount;
-                triangles3D[triangles2D.Length + i + 1] = triangles2D[i + 2] + vertexCount; // ここ修正！
+                triangles3D[triangles2D.Length + i + 1] = triangles2D[i + 2] + vertexCount;
                 triangles3D[triangles2D.Length + i + 2] = triangles2D[i + 1] + vertexCount;
             }
 
-            // 側面の三角形
+            // Side
             int sideIndex = triangles2D.Length * 2;
             for (int i = 0; i < vertexCount; i++)
             {
                 int next = (i + 1) % vertexCount;
 
-                // 側面1
+                // Side 1
                 triangles3D[sideIndex++] = i;
-                triangles3D[sideIndex++] = next;
                 triangles3D[sideIndex++] = i + vertexCount;
+                triangles3D[sideIndex++] = next;
 
-                // 側面2
+                // Side 2
                 triangles3D[sideIndex++] = next;
-                triangles3D[sideIndex++] = next + vertexCount;
                 triangles3D[sideIndex++] = i + vertexCount;
+                triangles3D[sideIndex++] = next + vertexCount;
             }
 
-            // 新しい3Dメッシュ作成
             Mesh mesh3D = new Mesh
             {
                 vertices = vertices3D,
@@ -208,9 +203,9 @@ namespace Fujin.TerrainGenerator
             };
             mesh3D.RecalculateNormals();
             mesh3D.RecalculateBounds();
+            mesh3D.Optimize();
 
             return mesh3D;
         }
-
     }
 }
