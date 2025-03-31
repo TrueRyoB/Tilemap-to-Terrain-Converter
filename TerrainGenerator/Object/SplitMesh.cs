@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using System;
 
 namespace Fujin.TerrainGenerator.Object
 {
@@ -16,18 +16,22 @@ namespace Fujin.TerrainGenerator.Object
         {
             public Vector2 PointA;
             public Vector2 PointB;
-            public Vector2 FrontIndices;
+            public Vector2 Indices;
         }
         
         private SplitMesh _pair;
         private Vector2 _connectPoint;
-        public Mesh Mesh { get; private set; }
-        private Vector3[] _vertices;
+        public readonly Mesh Mesh;
 
-        public SplitMesh(Vector3[] vertices)
+        public SplitMesh(Mesh mesh)
         {
-            _vertices = vertices;
-            Mesh = new Mesh();
+            Mesh = mesh;
+        }
+
+        public void SetPair(SplitMesh pair, Vector2 connectPoint)
+        {
+            pair = _pair;
+            _connectPoint = connectPoint;
         }
 
         public static SplitResult TrySplit(Mesh mesh, SplitLine splitLine, out SplitMesh splitMeshA,
@@ -47,55 +51,73 @@ namespace Fujin.TerrainGenerator.Object
             {
                 return SplitResult.InvalidPoint;
             }
+            int n = mesh.vertices.Length;
             bool isValidSplitPointA = false;
             bool isValidSplitPointB = false;
             for (int i = 0; i < mesh.vertices.Length; ++i)
             {
                 Vector2 pointA = mesh.vertices[i];
-                Vector2 pointB = mesh.vertices[(i + 1) % mesh.vertices.Length];
+                Vector2 pointB = mesh.vertices[(i + 1) % n];
 
                 if (IsPointOnLine(pointA, pointB, splitLine.PointA, out float r))
                 {
-                    splitLine.FrontIndices[0] = i+r;
+                    splitLine.Indices.x = (i + r) % n;
                     isValidSplitPointA = true;
                 }
 
                 if (IsPointOnLine(pointA, pointB, splitLine.PointB, out r))
                 {
-                    splitLine.FrontIndices[1] = i+r;
+                    splitLine.Indices.y = (i + r) % n;
                     isValidSplitPointB = true;
                 }
 
                 if (isValidSplitPointA && isValidSplitPointB) break;
             }
+            
             if (!isValidSplitPointA || !isValidSplitPointB)
             {
                 return SplitResult.InvalidPoint;
             }
-            
-            // Swap elements within SplitLine to avoid confusion
-            if (splitLine.FrontIndices[0] > splitLine.FrontIndices[1])
+
+            try
             {
-                (splitLine.PointA, splitLine.PointB) = (splitLine.PointB, splitLine.PointA);
-                (splitLine.FrontIndices[0], splitLine.FrontIndices[1]) = (splitLine.FrontIndices[1], splitLine.FrontIndices[0]);
+                // Swap elements within SplitLine to avoid confusion
+                Vector3[] verticesOriginal = mesh.vertices;
+                if (splitLine.Indices.x > splitLine.Indices.y)
+                {
+                    (splitLine.PointA, splitLine.PointB) = (splitLine.PointB, splitLine.PointA);
+                    (splitLine.Indices.x, splitLine.Indices.y) = (splitLine.Indices.y, splitLine.Indices.x);
+                }
+            
+                // Try splitting the mesh into two
+                int borderS = FloorF(splitLine.Indices.x);
+                int borderE = FloorF(splitLine.Indices.y);
+            
+                int lengthA = borderS + (n - (borderE + 1)) + 2;
+                Vector3[] verticesA = new Vector3[lengthA];
+                Array.Copy(verticesOriginal, 0, verticesA, 0, borderS);
+                verticesA[borderS] = splitLine.PointA;
+                verticesA[borderS + 1] = splitLine.PointB;
+                Array.Copy(verticesOriginal, borderE + 1, verticesA, borderS + 2, n - (borderE + 1));
+                splitMeshA = new SplitMesh(MeshGenerator.CreateMeshFromVertices(verticesA));
+                
+                int lengthB = borderE - (borderS + 1) + 2;
+                Vector3[] verticesB = new Vector3[lengthB];
+                verticesB[0] = splitLine.PointA;
+                Array.Copy(verticesOriginal, borderS + 1, verticesB, 1, lengthB - 2);
+                verticesB[^1] = splitLine.PointB;
+                splitMeshB = new SplitMesh(MeshGenerator.CreateMeshFromVertices(verticesB));
+                
+                splitMeshA.SetPair(splitMeshB, splitLine.PointA);
+                splitMeshB.SetPair(splitMeshA, splitLine.PointA);
+                
+                return SplitResult.Success;
             }
-            
-            // Try splitting the mesh into two
-            Vector3[] verticesOriginal = mesh.vertices;
-            int verticesCountA = GetNumberVertices(FloorF(splitLine.FrontIndices.x), verticesOriginal, ref splitLine);
-            
-            Vector3[] verticesA = new Vector3[verticesCountA];
-            Array.Copy(verticesOriginal, verticesA, verticesCountA);
-            
-            
-
-            return SplitResult.Success; //TODO: remove this
-        }
-
-        private static int GetNumberVertices(int n, Vector3[] verticesOriginal, ref SplitLine splitLine)
-        {
-            return n + (Same(splitLine.FrontIndices.x, FloorF(splitLine.FrontIndices.x)) ? 1 : 0)
-                     + (Same(splitLine.FrontIndices.y, FloorF(splitLine.FrontIndices.y)+1) ? 0 : 1);
+            catch (Exception ex)
+            {
+                Debug.LogError($"Split failed: {ex.Message}");
+                return SplitResult.Failure;
+            }
         }
         
         private static int FloorF(float f) => (int)Mathf.Floor(f);
