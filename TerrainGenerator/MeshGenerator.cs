@@ -13,8 +13,6 @@ namespace Fujin.TerrainGenerator
                 Debug.LogError("The number of vertices must be more than or equal to 3");
                 return null;
             }
-
-            Mesh mesh = new Mesh();
             
             // Copy the vertices while converting them to Vector3 from Vector2
             Vector3[] meshVertices = new Vector3[vertices.Count];
@@ -22,84 +20,74 @@ namespace Fujin.TerrainGenerator
             {
                 meshVertices[i] = new Vector3(vertices[i].x, vertices[i].y, 0);
             }
-
             
-            List<int> triangles = Triangulate(vertices);
-
-            if (triangles == null || triangles.Count < 3)
+            // Get a list of sets of three indices of vertices
+            if (!TryTriangulate(vertices, out List<int> triangles))
             {
                 Debug.LogError("Failed to generate triangles");
                 return null;
             }
 
-            mesh.vertices = meshVertices;
-            mesh.triangles = triangles.ToArray();
-
-            // 法線とUV計算
+            // Mesh with them
+            Mesh mesh = new Mesh()
+            {
+                vertices = meshVertices,
+                triangles = triangles.ToArray(),
+                uv = new Vector2[vertices.Count] //TODO: 面倒なのでVector2で省略
+            };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            mesh.uv = vertices.Select(v => Vector2.zero).ToArray(); //TODO: 面倒なので省略
             
             return mesh;
         }
 
-        // 三角形分割アルゴリズム
-        private static List<int> Triangulate(List<Vector2> vertices)
+        private static bool TryTriangulate(List<Vector2> vertices, out List<int> indices)
         {
-            List<int> indices = new List<int>();
-            List<int> remainingIndices = Enumerable.Range(0, vertices.Count).ToList();
+            indices = new List<int>();
 
-            while (remainingIndices.Count > 3)
+            if (vertices.Count < 3) return false;
+            List<int> remaining = Enumerable.Range(0, vertices.Count).ToList();
+
+            while (remaining.Count > 3)
             {
-                bool earFound = false;
+                bool found = false;
 
-                for (int i = 0; i < remainingIndices.Count; i++)
+                for (int i = 0; i < remaining.Count; ++i)
                 {
-                    int prev = remainingIndices[(i - 1 + remainingIndices.Count) % remainingIndices.Count];
-                    int curr = remainingIndices[i];
-                    int next = remainingIndices[(i + 1) % remainingIndices.Count];
+                    int prev = remaining[(i - 1 + remaining.Count) % remaining.Count];
+                    int curr = remaining[i];
+                    int next = remaining[(i + 1) % remaining.Count];
 
-                    if (IsEar(vertices, prev, curr, next, remainingIndices))
+                    if (IsEar(vertices, prev, curr, next, remaining))
                     {
                         indices.Add(prev);
                         indices.Add(curr);
                         indices.Add(next);
-                        remainingIndices.RemoveAt(i);
-                        earFound = true;
+                        remaining.RemoveAt(i);
+                        found = true;
                         break;
                     }
                 }
 
-                if (!earFound)
+                if (!found)
                 {
-                    Debug.LogError("耳切り法で三角形分割できませんでした！");
-                    return null;
+                    string s = "";
+                    foreach (int i in remaining)
+                    {
+                        s += $"{i}:{vertices[i]} ";
+                    }
+                    Debug.Log("FALSE Remaining indices: " + s);
+                    return false;
                 }
             }
+            
+            indices.Add(remaining[0]);
+            indices.Add(remaining[1]);
+            indices.Add(remaining[2]);
 
-            // 残り3頂点で最終三角形
-            indices.Add(remainingIndices[0]);
-            indices.Add(remainingIndices[1]);
-            indices.Add(remainingIndices[2]);
-
-            return indices;
+            return true; 
         }
-
-
-        // ポリゴンの面積計算
-        private static float Area(List<Vector2> vertices)
-        {
-            int n = vertices.Count;
-            float area = 0.0f;
-            for (int p = n - 1, q = 0; q < n; p = q++)
-            {
-                Vector2 v0 = vertices[p];
-                Vector2 v1 = vertices[q];
-                area += v0.x * v1.y - v1.x * v0.y;
-            }
-
-            return (area * 0.5f);
-        }
+        
 
         private static bool IsEar(List<Vector2> vertices, int prev, int curr, int next, List<int> remainingIndices)
         {
@@ -107,35 +95,33 @@ namespace Fujin.TerrainGenerator
             Vector2 b = vertices[curr];
             Vector2 c = vertices[next];
 
-            // 凹角であれば耳ではない
-            if (Vector3.Cross(b - a, c - a).z <= 0)
+            // False if the vector is counter-clockwise
+            if ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) > 0)
             {
+                Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (counter clockwise)");
                 return false;
             }
-
-            // 三角形内に他の頂点があるかチェック
-            for (int i = 0; i < remainingIndices.Count; i++)
+            
+            // False if a triangle contains another index
+            foreach (int index in remainingIndices)
             {
-                int index = remainingIndices[i];
-                if (index == prev || index == curr || index == next)
-                {
-                    continue;
-                }
+                if (index == prev || index == curr || index == next) continue;
 
-                if (IsPointInTriangle(vertices[index], a, b, c))
+                if (IsPointInTriangle(a, b, c, vertices[index]))
                 {
+                    Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (containing a point {index})");
                     return false;
                 }
             }
 
+            Debug.Log($"Valid ear: prev={prev}, curr={curr}, next={next}");
             return true;
         }
-
 
         private static float TriangleArea(Vector2 a, Vector2 b, Vector2 c)
             => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
         
-        private static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
+        public static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
         {
             float area = Mathf.Abs(TriangleArea(A, B, C));
             float area1 = Mathf.Abs(TriangleArea(P, B, C));
