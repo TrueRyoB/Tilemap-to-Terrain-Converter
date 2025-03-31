@@ -1,6 +1,6 @@
 # About
-This is an editor tool to efficiently create terrain for 3D platformer game for Unity.<br>
-<img src="https://github.com/TrueRyoB/Tilemap-to-Terrain-Converter/blob/main/photos%20for%20readme/screenshot%20march%2030th.png" width="500px"><br>
+This is an editor tool to efficiently create terrain for 3D platformer game for Unity by scanning through an assigned tilemap.<br>
+<img src="https://github.com/TrueRyoB/Tilemap-to-Terrain-Converter/blob/main/photos%20for%20readme/screenshot%20march%2030th.png" width="700px"><br>
 
 # Steps that I am following
 <br>
