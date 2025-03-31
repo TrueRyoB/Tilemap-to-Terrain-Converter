@@ -71,57 +71,49 @@ namespace Fujin.TerrainGenerator
         
         private readonly List<Vector2> _starOutline = new List<Vector2>()
         {
-            new Vector2(0,3),
-            new Vector2(1,1),
-            new Vector2(2.5f,1.5f),
-            new Vector2(1.5f,-1),
-            new Vector2(2, -2.5f),
-            new Vector2(1.5f,0),
-            new Vector2(-2,-2.5f),
-            new Vector2(-1.5f,-1),
-            new Vector2(-2.5f,1.5f),
-            new Vector2(-1,1),
+            new Vector2(3.5f, 6.5f),
+            new Vector2(4.5f, 4.5f),
+            new Vector2(6.0f, 5.0f),
+            new Vector2(5.0f, 2.5f),
+            new Vector2(5.5f, 1.0f),
+            new Vector2(3.5f, 2.0f),
+            new Vector2(1.5f, 1.0f),
+            new Vector2(2.0f, 2.5f),
+            new Vector2(1.0f, 5.0f),
+            new Vector2(2.5f, 4.5f)
         };
+
+        public void FactCheck()
+        {
+            Debug.LogWarning("Either FactCheck() remains empty or a modification is yet to be reflected!");
+        }
 
         private readonly List<Vector2> _boxOutline = new List<Vector2>()
         {
             new Vector2(0, 0),
-            new Vector2(3, 0),
+            new Vector2(0, 3),
             new Vector2(3, 3),
-            new Vector2(0, 3)
+            new Vector2(3, 0)
         };
 
         public void CreateStar()
+        {
+            CreateBlock(_starOutline, 5f, out _mostRecent3DMap);
+
+            _mostRecent3DMap.transform.position = mapCreatePosition;
+            _mostRecent3DMap.transform.localScale = Vector3.one * 0.3f;
+            _mostRecent3DMap.AddComponent<VoluntaryRotation>();
+            Debug.Log("Created a star!");
+        }
+        
+        public void CreateBox()
         {
             CreateBlock(_boxOutline, 5f, out _mostRecent3DMap);
 
             _mostRecent3DMap.transform.position = mapCreatePosition;
             _mostRecent3DMap.transform.localScale = Vector3.one * 0.3f;
-            Debug.Log("Created a star!");
-        }
-        
-        public void DrawStar()
-        {
-            //問題点：
-            //星型みたいな複雑なのはtriangulateできてない
-            //mappingが外側と内側のごっちゃのために描写がちゃんとできてない
-            //穴あきのも描写できるかテストがまだ出来てない
-            //選択肢たエリアにこのmappingを適用みたいなこともまだ
-            DrawPoly(_starOutline, out GameObject poly);
-            poly.transform.position = mapCreatePosition;
-            poly.transform.localScale = Vector3.one * 0.3f;
-            Debug.Log("Drew a star");
-        }
-
-        private void DrawPoly(List<Vector2> contour, out GameObject poly)
-        {
-            poly = new GameObject("2D MESH (made by code)");
-            MeshFilter meshFilter = poly.AddComponent<MeshFilter>();
-            MeshRenderer meshRenderer = poly.AddComponent<MeshRenderer>();
-            
-            meshFilter.mesh = MeshGenerator.CreateMeshFromVertices(contour);
-            
-            meshRenderer.material = mapMaterial;
+            _mostRecent3DMap.AddComponent<VoluntaryRotation>();
+            Debug.Log("Created a box!");
         }
 
         private void CreateBlock(List<Vector2> contour, float depth, out GameObject block)
