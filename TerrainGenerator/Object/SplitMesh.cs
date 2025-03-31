@@ -21,6 +21,7 @@ namespace Fujin.TerrainGenerator.Object
         
         private SplitMesh _pair;
         private Vector2 _connectPoint;
+        private bool _isFirstIndexConnect;
         public readonly Mesh Mesh;
 
         public SplitMesh(Mesh mesh)
@@ -28,10 +29,47 @@ namespace Fujin.TerrainGenerator.Object
             Mesh = mesh;
         }
 
-        public void SetPair(SplitMesh pair, Vector2 connectPoint)
+        private void Reset()
         {
-            pair = _pair;
+            _pair = null;
+            _connectPoint = Vector2.zero;
+        }
+
+        private void SetPair(SplitMesh pair, Vector2 connectPoint, bool isFirstIndexConnect)
+        {
+            _pair = pair;
             _connectPoint = connectPoint;
+            _isFirstIndexConnect = isFirstIndexConnect;
+        }
+
+        public bool TryMerge(SplitMesh a, SplitMesh b, out Mesh mergedMesh)
+        {
+            mergedMesh = null;
+            
+            if (a._pair != b || b._pair != a)
+            {
+                return false;
+            }
+
+            Mesh firstConnectMesh = a._isFirstIndexConnect ? a.Mesh : b.Mesh;
+            Mesh nextConnectMesh = a._isFirstIndexConnect ? b.Mesh : a.Mesh;
+            
+            Vector3[] vertices = new Vector3[firstConnectMesh.vertices.Length + nextConnectMesh.vertices.Length - 2];
+
+            for (int i = 0; i < firstConnectMesh.vertices.Length; i++)
+            {
+                vertices[i] = firstConnectMesh.vertices[i];
+            }
+            for (int i = 0; i < nextConnectMesh.vertices.Length - 2; i++)
+            {
+                vertices[i + firstConnectMesh.vertices.Length] = nextConnectMesh.vertices[i+1];
+            }
+            
+            mergedMesh = MeshGenerator.CreateMeshFromVertices(vertices);
+
+            a.Reset();
+            b.Reset();
+            return true;
         }
 
         public static SplitResult TrySplit(Mesh mesh, SplitLine splitLine, out SplitMesh splitMeshA,
@@ -108,8 +146,8 @@ namespace Fujin.TerrainGenerator.Object
                 verticesB[^1] = splitLine.PointB;
                 splitMeshB = new SplitMesh(MeshGenerator.CreateMeshFromVertices(verticesB));
                 
-                splitMeshA.SetPair(splitMeshB, splitLine.PointA);
-                splitMeshB.SetPair(splitMeshA, splitLine.PointA);
+                splitMeshA.SetPair(splitMeshB, splitLine.PointA, false);
+                splitMeshB.SetPair(splitMeshA, splitLine.PointA, true);
                 
                 return SplitResult.Success;
             }
@@ -121,9 +159,6 @@ namespace Fujin.TerrainGenerator.Object
         }
         
         private static int FloorF(float f) => (int)Mathf.Floor(f);
-        private static bool Same(float f, int i) => Mathf.Abs(f - i) < 0.001f;
-
-
         
         private static bool IsPointOnLine(Vector2 a, Vector2 b, Vector2 p, out float ratio)
         {
