@@ -26,3 +26,8 @@ This is an editor tool to efficiently create terrain for 3D platformer game for 
 ・Design a class to be inherited<br>
 ・Let the class call mesh generation function itself<br>
 ・End?<br>
+
+# Current Strategy (reminder to myself kind of)
+・Triangulating based on more than one holes is so dynamic and frustrating that would require implementing a brand-new methodology<br>
+・I am not a brilliant boy<br>
+・So, I deided to deploy a merge strategy - about concatenating small pieces of mesh together that were cut off about the mid point of the holes for n itmes<br>
