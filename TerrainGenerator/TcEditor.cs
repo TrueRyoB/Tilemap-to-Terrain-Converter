@@ -12,7 +12,7 @@ namespace Fujin.TerrainGenerator
 
             TilemapConverter myTool = (TilemapConverter)target;
 
-            if (GUILayout.Button("Convert into 3D map🚀"))
+            if (GUILayout.Button("Convert into 3D map"))
             {
                 myTool.ConvertTilemap();
             }
@@ -26,10 +26,15 @@ namespace Fujin.TerrainGenerator
             {
                 myTool.CreateStar();
             }
-            
-            if (GUILayout.Button("Draw a cute star"))
+
+            if (GUILayout.Button("Create a box"))
             {
-                myTool.DrawStar();
+                myTool.CreateBox();
+            }
+            
+            if (GUILayout.Button("Fact Check"))
+            {
+                myTool.FactCheck();
             }
         }
     }
