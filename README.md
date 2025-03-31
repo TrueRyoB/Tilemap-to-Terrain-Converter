@@ -28,6 +28,6 @@ This is an editor tool to efficiently create terrain for 3D platformer game for 
 ・End?<br>
 
 # Current Strategy (reminder to myself kind of)
-・It kind of upsets me that taking a decent amount of time only allowed me to write two methods and they both are not even near perfection.
-・But I guess I am going to procrastinate strategically the implementation of multi split-merge triangulation.
-・The next will be followed by solving some issues and implementing a method at MeshGenerator to accept List<Vector2> vertices and List<List<Vector2[]>> holes to return the finished 2D mesh
+・It kind of upsets me that taking a decent amount of time only allowed me to write two methods and they both are not even near perfection.<br>
+・But I guess I am going to procrastinate strategically the implementation of multi split-merge triangulation.<br>
+・The next will be followed by solving some issues and implementing a method at MeshGenerator to accept List<Vector2> vertices and List<List<Vector2[]>> holes to return the finished 2D mesh.<br>
