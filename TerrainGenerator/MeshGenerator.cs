@@ -1,11 +1,59 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using Fujin.TerrainGenerator.Object;
 
 namespace Fujin.TerrainGenerator
 {
     public class MeshGenerator : MonoBehaviour
     {
+        public static Mesh CreateMeshFromVertices(List<Vector2> vertices, List<List<Vector2>> holes)
+        {
+            if (vertices == null || vertices.Count < 3)
+            {
+                Debug.LogError("The number of vertices must be more than or equal to 3");
+                return null;
+            }
+
+            if (holes == null)
+            {
+                return CreateMeshFromVertices(vertices);
+            }
+            
+            Mesh baseMesh = CreateMeshFromVertices(vertices);
+
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                //if(SplitMesh.TrySplit(baseMesh, ))
+            }
+        }
+
+        // private static SplitMesh.SplitLine AnalyzeHole(List<Vector2> hole)
+        // {
+        //     // Search through the vertices and find the middle x value
+        //     // x: min, y: max
+        //     Vector2 range = Vector2.zero;
+        //
+        //     foreach (Vector2 ele in hole)
+        //     {
+        //         range.x = Mathf.Min(range.x, ele.x);
+        //         range.y = Mathf.Max(range.y, ele.x);
+        //     }
+        //
+        //     float midX = range.x + (range.y - range.x) / 2f;
+        //     
+        //     //TODO: まずい...切断した断面は穴に沿わないといけないはずなのに
+        //     //TODO: splitしただけで満足しているのはよくない
+        //     //TODO: splitMeshにsplitHoleVerticesを渡すmethodを導入しないといけない
+        //     
+        //     
+        //     
+        //     //TODO: needs to make sure that the hole vertices are valid
+        //
+        //     return new SplitMesh.SplitLine(Vector2.zero, Vector2.zero);
+        // }
+        
         public static Mesh CreateMeshFromVertices(List<Vector2> vertices)
         {
             if (vertices == null || vertices.Count < 3)
@@ -34,6 +82,38 @@ namespace Fujin.TerrainGenerator
                 vertices = meshVertices,
                 triangles = triangles.ToArray(),
                 uv = new Vector2[vertices.Count] //TODO: 面倒なのでVector2で省略
+            };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            
+            return mesh;
+        }
+
+        public static Mesh CreateMeshFromVertices(Vector3[] vertices)
+        {
+            if (vertices == null || vertices.Length < 3)
+            {
+                Debug.LogError("The number of vertices must be more than or equal to 3");
+                return null;
+            }
+            
+            List<Vector2> vertices2D = new List<Vector2>(vertices.Length);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                vertices2D[i] = new Vector2(vertices[i].x, vertices[i].y);
+            }
+            
+            if (!TryTriangulate(vertices2D, out List<int> triangles))
+            {
+                Debug.LogError("Failed to generate triangles");
+                return null;
+            }
+            
+            Mesh mesh = new Mesh()
+            {
+                vertices = vertices,
+                triangles = triangles.ToArray(),
+                uv = new Vector2[vertices.Length] //TODO: 面倒なのでVector2で省略
             };
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
@@ -121,7 +201,7 @@ namespace Fujin.TerrainGenerator
         private static float TriangleArea(Vector2 a, Vector2 b, Vector2 c)
             => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
         
-        public static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
+        private static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
         {
             float area = Mathf.Abs(TriangleArea(A, B, C));
             float area1 = Mathf.Abs(TriangleArea(P, B, C));

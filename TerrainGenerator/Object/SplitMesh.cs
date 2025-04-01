@@ -1,5 +1,7 @@
 using UnityEngine;
 using System;
+using System.Linq;
+using Fujin.TerrainGenerator.Utility;
 
 namespace Fujin.TerrainGenerator.Object
 {
@@ -11,12 +13,6 @@ namespace Fujin.TerrainGenerator.Object
             InvalidPoint,
             InvalidMesh,
             Failure,
-        }
-        public struct SplitLine
-        {
-            public Vector2 PointA;
-            public Vector2 PointB;
-            public Vector2 Indices;
         }
         
         private SplitMesh _pair;
@@ -64,8 +60,16 @@ namespace Fujin.TerrainGenerator.Object
             {
                 vertices[i + firstConnectMesh.vertices.Length] = nextConnectMesh.vertices[i+1];
             }
+
+            mergedMesh = new Mesh()
+            {
+                vertices = vertices,
+                triangles = firstConnectMesh.triangles.Concat(nextConnectMesh.triangles).ToArray(),
+                uv = new Vector2[vertices.Length]
+            };
             
-            mergedMesh = MeshGenerator.CreateMeshFromVertices(vertices);
+            mergedMesh.RecalculateNormals();
+            mergedMesh.RecalculateBounds();
 
             a.Reset();
             b.Reset();
@@ -97,13 +101,13 @@ namespace Fujin.TerrainGenerator.Object
                 Vector2 pointA = mesh.vertices[i];
                 Vector2 pointB = mesh.vertices[(i + 1) % n];
 
-                if (IsPointOnLine(pointA, pointB, splitLine.PointA, out float r))
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.PointA, out float r))
                 {
                     splitLine.Indices.x = (i + r) % n;
                     isValidSplitPointA = true;
                 }
 
-                if (IsPointOnLine(pointA, pointB, splitLine.PointB, out r))
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.PointB, out r))
                 {
                     splitLine.Indices.y = (i + r) % n;
                     isValidSplitPointB = true;
@@ -128,8 +132,8 @@ namespace Fujin.TerrainGenerator.Object
                 }
             
                 // Try splitting the mesh into two
-                int borderS = FloorF(splitLine.Indices.x);
-                int borderE = FloorF(splitLine.Indices.y);
+                int borderS = Calc.FloorF(splitLine.Indices.x);
+                int borderE = Calc.FloorF(splitLine.Indices.y);
             
                 int lengthA = borderS + (n - (borderE + 1)) + 2;
                 Vector3[] verticesA = new Vector3[lengthA];
@@ -156,18 +160,6 @@ namespace Fujin.TerrainGenerator.Object
                 Debug.LogError($"Split failed: {ex.Message}");
                 return SplitResult.Failure;
             }
-        }
-        
-        private static int FloorF(float f) => (int)Mathf.Floor(f);
-        
-        private static bool IsPointOnLine(Vector2 a, Vector2 b, Vector2 p, out float ratio)
-        {
-            float length = Vector2.Distance(a, b);
-            float lengthA = Vector2.Distance(a, p);
-            float lengthB = Vector2.Distance(p, b);
-            ratio = lengthA / length;
-
-            return Mathf.Abs(lengthA + lengthB - length) < 0.1f;
         }
     }
 }
