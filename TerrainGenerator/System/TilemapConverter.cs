@@ -154,7 +154,21 @@ namespace Fujin.TerrainGenerator.System
         
         public void FactCheck()
         {
-            Debug.LogWarning("Either FactCheck() remains empty or a modification is yet to be reflected!");
+            if (MeshGenerator.CreateMeshFromVertices(_cheeseOutline) == null)
+            {
+                Debug.LogError("Cheese outline is not authentic");
+                return;
+            }
+
+            foreach (var hole in _cheeseHoles)
+            {
+                if (MeshGenerator.CreateMeshFromVertices(hole) == null)
+                {
+                    Debug.LogError("More than one of cheese holes are not authentic");
+                    return;
+                }
+            }
+            Debug.Log("Both are authentic");
         }
 
         private void CreateBlock(List<Vector2> contour, List<List<Vector2>> holes, float depth, out GameObject block)
