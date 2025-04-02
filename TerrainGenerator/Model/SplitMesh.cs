@@ -25,8 +25,7 @@ namespace Fujin.TerrainGenerator.Model
         
         public Mesh MeshLeft { get; private set; }
         public Mesh MeshRight { get; private set; }
-
-        public SplitMesh() { }
+        
 
         private void AssignMesh(Mesh meshLeft, Mesh meshRight)
         {
@@ -136,9 +135,9 @@ namespace Fujin.TerrainGenerator.Model
                 int floorBottom = Calc.FloorF(indices.x);
                 int floorTop = Calc.FloorF(indices.y);
                 
-                int lengthLeft = floorTop - floorBottom + 1 + splitLine.LeftLine.Count;
-                int lengthRight = floorBottom - floorTop + 1 + splitLine.RightLine.Count;
                 int l = splitLine.LeftLine.Count, r = splitLine.RightLine.Count;
+                int lengthLeft = floorTop - floorBottom + 1 + l;
+                int lengthRight = floorBottom - floorTop + 1 + r;
                 
                 if (floorBottom > floorTop) lengthLeft += n;
                 else lengthRight += n;
@@ -157,6 +156,7 @@ namespace Fujin.TerrainGenerator.Model
             catch (Exception ex)
             {
                 Debug.LogError($"Split failed: {ex.Message}");
+                Debug.Log($"floorBottom: {Calc.FloorF(indices.x)}, floorTop: {Calc.FloorF(indices.y)}, l = {splitLine.LeftLine.Count}, r = {splitLine.RightLine.Count}");
                 return SplitResult.Failure;
             }
         }

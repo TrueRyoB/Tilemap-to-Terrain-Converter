@@ -84,17 +84,52 @@ namespace Fujin.TerrainGenerator.System
             new Vector2(2.5f, 4.5f)
         };
 
-        public void FactCheck()
-        {
-            Debug.LogWarning("Either FactCheck() remains empty or a modification is yet to be reflected!");
-        }
-
         private readonly List<Vector2> _boxOutline = new List<Vector2>()
         {
             new Vector2(0, 0),
             new Vector2(0, 3),
             new Vector2(3, 3),
             new Vector2(3, 0)
+        };
+
+        private readonly List<Vector2> _cheeseOutline = new List<Vector2>()
+        {
+            new Vector2(0, 0),
+            new Vector2(0, 4),
+            new Vector2(6, 4),
+            new Vector2(6, 0),
+        };
+
+        private readonly List<List<Vector2>> _cheeseHoles = new List<List<Vector2>>()
+        {
+            new List<Vector2>()
+            {
+                new Vector2(1, 1),
+                new Vector2(1, 2),
+                new Vector2(2, 2),
+                new Vector2(2, 1),
+            },
+            new List<Vector2>()
+            {
+                new Vector2(3, 1),
+                new Vector2(3, 2),
+                new Vector2(4, 2),
+                new Vector2(4, 1),
+            },
+            new List<Vector2>()
+            {
+                new Vector2(1, 3),
+                new Vector2(1, 4),
+                new Vector2(2, 4),
+                new Vector2(2, 3),
+            },
+            new List<Vector2>()
+            {
+                new Vector2(4, 3),
+                new Vector2(4, 4),
+                new Vector2(5, 4),
+                new Vector2(5, 3),
+            },
         };
 
         public void CreateStar()
@@ -107,14 +142,30 @@ namespace Fujin.TerrainGenerator.System
             Debug.Log("Created a star!");
         }
         
-        public void CreateBox()
+        public void CreateCheese()
         {
-            CreateBlock(_boxOutline, 5f, out _mostRecent3DMap);
-
+            CreateBlock(_cheeseOutline, _cheeseHoles,5f, out _mostRecent3DMap); 
+            
             _mostRecent3DMap.transform.position = mapCreatePosition;
             _mostRecent3DMap.transform.localScale = Vector3.one * 0.3f;
             _mostRecent3DMap.AddComponent<VoluntaryRotation>();
             Debug.Log("Created a box!");
+        }
+        
+        public void FactCheck()
+        {
+            Debug.LogWarning("Either FactCheck() remains empty or a modification is yet to be reflected!");
+        }
+
+        private void CreateBlock(List<Vector2> contour, List<List<Vector2>> holes, float depth, out GameObject block)
+        {
+            block = new GameObject("3D MAP (made by code)");
+            MeshFilter meshFilter = block.AddComponent<MeshFilter>();
+            MeshRenderer meshRenderer = block.AddComponent<MeshRenderer>();
+            
+            meshFilter.mesh = MeshGenerator.Create3DMeshFrom2DMesh(MeshGenerator.CreateMeshFromVertices(contour, holes), depth);
+            
+            meshRenderer.material = mapMaterial;
         }
 
         private void CreateBlock(List<Vector2> contour, float depth, out GameObject block)

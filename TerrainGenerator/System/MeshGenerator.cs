@@ -186,7 +186,7 @@ namespace Fujin.TerrainGenerator.System
             // False if the vector is counter-clockwise
             if ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) > 0)
             {
-                Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (counter clockwise)");
+                // Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (counter clockwise)");
                 return false;
             }
             
@@ -197,12 +197,11 @@ namespace Fujin.TerrainGenerator.System
 
                 if (IsPointInTriangle(a, b, c, vertices[index]))
                 {
-                    Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (containing a point {index})");
+                    // Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (containing a point {index})");
                     return false;
                 }
             }
 
-            Debug.Log($"Valid ear: prev={prev}, curr={curr}, next={next}");
             return true;
         }
 

@@ -13,24 +13,24 @@ namespace Fujin.TerrainGenerator.EditorTool
 
             TilemapConverter myTool = (TilemapConverter)target;
 
-            if (GUILayout.Button("Convert into 3D map"))
+            if (GUILayout.Button("Parse tilemap and create a platform"))
             {
                 myTool.ConvertTilemap();
             }
 
-            if (GUILayout.Button("Destroy the most recent 3D map !!"))
+            if (GUILayout.Button("Destroy the most recent object"))
             {
                 myTool.DestroyMostRecent3DMap();
+            }
+            
+            if (GUILayout.Button("Create a cheese"))
+            {
+                myTool.CreateCheese();
             }
 
             if (GUILayout.Button("Create a cute star"))
             {
                 myTool.CreateStar();
-            }
-
-            if (GUILayout.Button("Create a box"))
-            {
-                myTool.CreateBox();
             }
             
             if (GUILayout.Button("Fact Check"))

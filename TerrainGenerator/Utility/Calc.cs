@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,8 +46,8 @@ namespace Fujin.TerrainGenerator.Utility
             
             foreach (Vector3 point in points)
             {
-                if (min.y < point.y) min = point;
-                if (max.y > point.y) max = point;
+                if (min.y > point.y) min = point;
+                if (max.y < point.y) max = point;
             }
             
             return new List<Vector2> { min, max };
@@ -137,8 +136,8 @@ namespace Fujin.TerrainGenerator.Utility
         }
         
         public static int FloorF(float f) => (int)Mathf.Floor(f);
-        public static int CeilF(float f) => (int)Mathf.Ceil(f);
-        public static bool IsBetween(float a, float b, float x)
+        private static int CeilF(float f) => (int)Mathf.Ceil(f);
+        private static bool IsBetween(float a, float b, float x)
             => (a >= x && b <= x) || (a <= x && b >= x);
         
         private Calc() {}

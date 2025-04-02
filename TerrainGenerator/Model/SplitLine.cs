@@ -56,9 +56,9 @@ namespace Fujin.TerrainGenerator.Model
 
             {
                 List<Vector2> maxAndMin = Calc.FilterByMostTwo(vertices);
-                if (maxAndMin[0].y > heightRange.x || maxAndMin[1].y < heightRange.y)
+                if (maxAndMin[0].y < heightRange.x || maxAndMin[1].y > heightRange.y)
                 {
-                    Debug.LogError("Error: height range is smaller than the given vertices");
+                    // Debug.Log($"Hole range: ({maxAndMin[0].y}, {maxAndMin[1].y}), Given heightRange: ({heightRange.x}, {heightRange.y})");
                     return SetResult.InvalidHeightRange;
                 }
             }
