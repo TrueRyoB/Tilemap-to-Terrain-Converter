@@ -56,13 +56,7 @@ namespace Fujin.TerrainGenerator.Utility
         
         public static List<Vector2> GetSplitVertices(List<Vector2> vertices ,List<Vector3> crossedPoints, bool isLeft)
         {
-            if (crossedPoints.Count == 0)
-            {
-                Debug.LogError("How am I supposed to split by nothing, bruh");
-                return vertices;
-            }
-            
-            if (crossedPoints.Count > 2)
+            if (crossedPoints.Count > 2 || crossedPoints.Count == 0)
             {
                 Debug.LogError("This function is designed to work only for the length of 1 or 2!!");
                 return vertices;
