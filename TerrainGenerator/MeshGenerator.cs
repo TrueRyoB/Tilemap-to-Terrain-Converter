@@ -1,277 +1,164 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
+using System;
 using System.Linq;
-using Fujin.TerrainGenerator.Object;
+using Fujin.TerrainGenerator.Utility;
 
-namespace Fujin.TerrainGenerator
+namespace Fujin.TerrainGenerator.Object
 {
-    public class MeshGenerator : MonoBehaviour
+    public class SplitMesh
     {
-        public static Mesh CreateMeshFromVertices(List<Vector2> vertices, List<List<Vector2>> holes)
+        public enum SplitResult
         {
-            if (vertices == null || vertices.Count < 3)
-            {
-                Debug.LogError("The number of vertices must be more than or equal to 3");
-                return null;
-            }
-
-            if (holes == null)
-            {
-                return CreateMeshFromVertices(vertices);
-            }
-            
-            Mesh baseMesh = CreateMeshFromVertices(vertices);
-
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                //if(SplitMesh.TrySplit(baseMesh, ))
-            }
-        }
-
-        // private static SplitMesh.SplitLine AnalyzeHole(List<Vector2> hole)
-        // {
-        //     // Search through the vertices and find the middle x value
-        //     // x: min, y: max
-        //     Vector2 range = Vector2.zero;
-        //
-        //     foreach (Vector2 ele in hole)
-        //     {
-        //         range.x = Mathf.Min(range.x, ele.x);
-        //         range.y = Mathf.Max(range.y, ele.x);
-        //     }
-        //
-        //     float midX = range.x + (range.y - range.x) / 2f;
-        //     
-        //     //TODO: まずい...切断した断面は穴に沿わないといけないはずなのに
-        //     //TODO: splitしただけで満足しているのはよくない
-        //     //TODO: splitMeshにsplitHoleVerticesを渡すmethodを導入しないといけない
-        //     
-        //     
-        //     
-        //     //TODO: needs to make sure that the hole vertices are valid
-        //
-        //     return new SplitMesh.SplitLine(Vector2.zero, Vector2.zero);
-        // }
-        
-        public static Mesh CreateMeshFromVertices(List<Vector2> vertices)
-        {
-            if (vertices == null || vertices.Count < 3)
-            {
-                Debug.LogError("The number of vertices must be more than or equal to 3");
-                return null;
-            }
-            
-            // Copy the vertices while converting them to Vector3 from Vector2
-            Vector3[] meshVertices = new Vector3[vertices.Count];
-            for (int i = 0; i < vertices.Count; i++)
-            {
-                meshVertices[i] = new Vector3(vertices[i].x, vertices[i].y, 0);
-            }
-            
-            // Get a list of sets of three indices of vertices
-            if (!TryTriangulate(vertices, out List<int> triangles))
-            {
-                Debug.LogError("Failed to generate triangles");
-                return null;
-            }
-
-            // Mesh with them
-            Mesh mesh = new Mesh()
-            {
-                vertices = meshVertices,
-                triangles = triangles.ToArray(),
-                uv = new Vector2[vertices.Count] //TODO: 面倒なのでVector2で省略
-            };
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            
-            return mesh;
-        }
-
-        public static Mesh CreateMeshFromVertices(Vector3[] vertices)
-        {
-            if (vertices == null || vertices.Length < 3)
-            {
-                Debug.LogError("The number of vertices must be more than or equal to 3");
-                return null;
-            }
-            
-            List<Vector2> vertices2D = new List<Vector2>(vertices.Length);
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                vertices2D[i] = new Vector2(vertices[i].x, vertices[i].y);
-            }
-            
-            if (!TryTriangulate(vertices2D, out List<int> triangles))
-            {
-                Debug.LogError("Failed to generate triangles");
-                return null;
-            }
-            
-            Mesh mesh = new Mesh()
-            {
-                vertices = vertices,
-                triangles = triangles.ToArray(),
-                uv = new Vector2[vertices.Length] //TODO: 面倒なのでVector2で省略
-            };
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            
-            return mesh;
-        }
-
-        private static bool TryTriangulate(List<Vector2> vertices, out List<int> indices)
-        {
-            indices = new List<int>();
-
-            if (vertices.Count < 3) return false;
-            List<int> remaining = Enumerable.Range(0, vertices.Count).ToList();
-
-            while (remaining.Count > 3)
-            {
-                bool found = false;
-
-                for (int i = 0; i < remaining.Count; ++i)
-                {
-                    int prev = remaining[(i - 1 + remaining.Count) % remaining.Count];
-                    int curr = remaining[i];
-                    int next = remaining[(i + 1) % remaining.Count];
-
-                    if (IsEar(vertices, prev, curr, next, remaining))
-                    {
-                        indices.Add(prev);
-                        indices.Add(curr);
-                        indices.Add(next);
-                        remaining.RemoveAt(i);
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    string s = "";
-                    foreach (int i in remaining)
-                    {
-                        s += $"{i}:{vertices[i]} ";
-                    }
-                    Debug.Log("FALSE Remaining indices: " + s);
-                    return false;
-                }
-            }
-            
-            indices.Add(remaining[0]);
-            indices.Add(remaining[1]);
-            indices.Add(remaining[2]);
-
-            return true; 
+            Success,
+            InvalidPoint,
+            InvalidMesh,
+            Failure,
         }
         
+        private SplitMesh _pair;
+        private Vector2 _connectPoint;
+        private bool _isFirstIndexConnect;
+        public Mesh MeshLeft { get; private set; }
+        public Mesh MeshRight { get; private set; }
 
-        private static bool IsEar(List<Vector2> vertices, int prev, int curr, int next, List<int> remainingIndices)
+        public SplitMesh() { }
+
+        private void AssignMesh(Mesh meshLeft, Mesh meshRight)
         {
-            Vector2 a = vertices[prev];
-            Vector2 b = vertices[curr];
-            Vector2 c = vertices[next];
+            MeshLeft = meshLeft;
+            MeshRight = meshRight;
+        }
 
-            // False if the vector is counter-clockwise
-            if ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) > 0)
+        private void Reset()
+        {
+            _pair = null;
+            _connectPoint = Vector2.zero;
+        }
+
+        private void SetPair(SplitMesh pair, Vector2 connectPoint, bool isFirstIndexConnect)
+        {
+            _pair = pair;
+            _connectPoint = connectPoint;
+            _isFirstIndexConnect = isFirstIndexConnect;
+        }
+
+        public bool TryMerge(SplitMesh a, SplitMesh b, out Mesh mergedMesh)
+        {
+            mergedMesh = null;
+            
+            if (a._pair != b || b._pair != a)
             {
-                Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (counter clockwise)");
                 return false;
             }
-            
-            // False if a triangle contains another index
-            foreach (int index in remainingIndices)
-            {
-                if (index == prev || index == curr || index == next) continue;
 
-                if (IsPointInTriangle(a, b, c, vertices[index]))
-                {
-                    Debug.LogWarning($"Invalid ear: prev={prev}, curr={curr}, next={next} (containing a point {index})");
-                    return false;
-                }
+            Mesh firstConnectMesh = a._isFirstIndexConnect ? a.Mesh : b.Mesh;
+            Mesh nextConnectMesh = a._isFirstIndexConnect ? b.Mesh : a.Mesh;
+            
+            Vector3[] vertices = new Vector3[firstConnectMesh.vertices.Length + nextConnectMesh.vertices.Length - 2];
+
+            for (int i = 0; i < firstConnectMesh.vertices.Length; i++)
+            {
+                vertices[i] = firstConnectMesh.vertices[i];
+            }
+            for (int i = 0; i < nextConnectMesh.vertices.Length - 2; i++)
+            {
+                vertices[i + firstConnectMesh.vertices.Length] = nextConnectMesh.vertices[i+1];
             }
 
-            Debug.Log($"Valid ear: prev={prev}, curr={curr}, next={next}");
+            mergedMesh = new Mesh()
+            {
+                vertices = vertices,
+                triangles = firstConnectMesh.triangles.Concat(nextConnectMesh.triangles).ToArray(),
+                uv = new Vector2[vertices.Length]
+            };
+            
+            mergedMesh.RecalculateNormals();
+            mergedMesh.RecalculateBounds();
+
+            a.Reset();
+            b.Reset();
             return true;
         }
 
-        private static float TriangleArea(Vector2 a, Vector2 b, Vector2 c)
-            => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-        
-        private static bool IsPointInTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
+        public static SplitResult TrySplit(Mesh mesh, SplitLine splitLine, out SplitMesh splitMesh)
         {
-            float area = Mathf.Abs(TriangleArea(A, B, C));
-            float area1 = Mathf.Abs(TriangleArea(P, B, C));
-            float area2 = Mathf.Abs(TriangleArea(A, P, C));
-            float area3 = Mathf.Abs(TriangleArea(A, B, P));
-
-            return Mathf.Approximately(area, (area1 + area2 + area3));
-        }
-        
-        public static Mesh Create3DMeshFrom2DMesh(Mesh mesh2D, float depth)
-        {
-            if (mesh2D == null || mesh2D.vertexCount == 0)
-            {
-                Debug.LogError("Error: Passed mesh is invalid!");
-                return null;
-            }
-
-            Vector3[] vertices2D = mesh2D.vertices;
-            int[] triangles2D = mesh2D.triangles;
-
-            int vertexCount = vertices2D.Length;
-            Vector3[] vertices3D = new Vector3[vertexCount * 2];
-            int[] triangles3D = new int[triangles2D.Length * 2 + vertexCount * 6]; // (front + back) + (a pair of triangles for side)
+            splitMesh = null;
             
-            for (int i = 0; i < vertexCount; i++)
+            // Return false if mesh is invalid
+            if (mesh.vertices == null || mesh.vertices.Length < 3 || mesh.triangles == null || mesh.triangles.Length % 3 != 0)
             {
-                vertices3D[i] = vertices2D[i]; // Front
-                vertices3D[i + vertexCount] = vertices2D[i] + new Vector3(0, 0, -depth); // Back
+                return SplitResult.InvalidMesh;
+            }
+            
+            // Return false if split points are invalid
+            if (!splitLine.IsValid())
+            {
+                return SplitResult.InvalidPoint;
+            }
+            
+            int n = mesh.vertices.Length;
+            bool isValidSplitBottom = false;
+            bool isValidSplitTop = false;
+
+            Vector2 indices = Vector2.zero;
+            for (int i = 0; i < mesh.vertices.Length; ++i)
+            {
+                Vector2 pointA = mesh.vertices[i];
+                Vector2 pointB = mesh.vertices[(i + 1) % n];
+
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[0], out float r))
+                {
+                    indices.x = (i + r) % n;
+                    isValidSplitBottom = true;
+                }
+
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[^1], out r))
+                {
+                    indices.y = (i + r) % n;
+                    isValidSplitTop = true;
+                }
+
+                if (isValidSplitBottom && isValidSplitTop) break;
+            }
+            
+            if (!isValidSplitBottom || !isValidSplitTop)
+            {
+                return SplitResult.InvalidPoint;
             }
 
-            for (int i = 0; i < triangles2D.Length; i += 3)
+            try
             {
-                // Front
-                triangles3D[i] = triangles2D[i];
-                triangles3D[i + 1] = triangles2D[i + 1];
-                triangles3D[i + 2] = triangles2D[i + 2];
+                // Swap elements within SplitLine to avoid confusion
+                Vector3[] verticesOriginal = mesh.vertices;
+                splitMesh = new SplitMesh();
+            
+                // Try splitting the mesh into two
+                int floorBottom = Calc.FloorF(indices.x);
+                int floorTop = Calc.FloorF(indices.y);
+                
+                int lengthLeft = floorTop - floorBottom + 1 + splitLine.LeftLine.Count;
+                int lengthRight = floorBottom - floorTop + 1 + splitLine.RightLine.Count;
+                int l = splitLine.LeftLine.Count, r = splitLine.RightLine.Count;
+                
+                if (floorBottom > floorTop) lengthLeft += n;
+                else lengthRight += n;
+                
+                Vector3[] verticesLeft = new Vector3[lengthLeft];
+                for (int i=0; i < l; ++i) verticesLeft[i] = splitLine.LeftLine[i];
+                for (int i = floorBottom; i < floorTop + n; ++i) verticesLeft[i + l - floorBottom] = verticesOriginal[i % n];
+                
+                Vector3[] verticesRight = new Vector3[lengthRight];
+                for (int i=0; i < r; ++i) verticesRight[i] = splitLine.RightLine[i];
+                for (int i = floorTop; i < floorBottom; ++i) verticesRight[i + r - floorTop] = verticesOriginal[i%n];
 
-                // Back (reversed)
-                triangles3D[triangles2D.Length + i] = triangles2D[i] + vertexCount;
-                triangles3D[triangles2D.Length + i + 1] = triangles2D[i + 2] + vertexCount;
-                triangles3D[triangles2D.Length + i + 2] = triangles2D[i + 1] + vertexCount;
+                splitMesh.AssignMesh(MeshGenerator.CreateMeshFromVertices(verticesLeft), MeshGenerator.CreateMeshFromVertices(verticesRight));
+                return SplitResult.Success;
             }
-
-            // Side
-            int sideIndex = triangles2D.Length * 2;
-            for (int i = 0; i < vertexCount; i++)
+            catch (Exception ex)
             {
-                int next = (i + 1) % vertexCount;
-
-                // Side 1
-                triangles3D[sideIndex++] = i;
-                triangles3D[sideIndex++] = i + vertexCount;
-                triangles3D[sideIndex++] = next;
-
-                // Side 2
-                triangles3D[sideIndex++] = next;
-                triangles3D[sideIndex++] = i + vertexCount;
-                triangles3D[sideIndex++] = next + vertexCount;
+                Debug.LogError($"Split failed: {ex.Message}");
+                return SplitResult.Failure;
             }
-
-            Mesh mesh3D = new Mesh
-            {
-                vertices = vertices3D,
-                triangles = triangles3D
-            };
-            mesh3D.RecalculateNormals();
-            mesh3D.RecalculateBounds();
-            mesh3D.Optimize();
-
-            return mesh3D;
         }
     }
 }
