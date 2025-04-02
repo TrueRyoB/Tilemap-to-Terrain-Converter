@@ -19,15 +19,11 @@ This is an editor tool to efficiently create terrain for 3D platformer game for 
 > Mesh Generation Phase <br>
 ・Understanding runtime mesh generation mechansim (solved!)<br>
 ・Implementing a system that outputs an actual solid object given vertices (solved!)<br>
-・Improving the system so that there may exist holes inside　← here<br>
+・Improving the system so that there may exist holes inside (solved!)<br>
+・Test to see if everything works as intended <-here<br>
 <br>
 > Tilemap Reader Phase <br>
 ・Create a system that controls an enumerator representing a type of terrain<br>
 ・Design a class to be inherited<br>
 ・Let the class call mesh generation function itself<br>
 ・End?<br>
-
-# Current Strategy (reminder to myself kind of)
-・It kind of upsets me that taking a decent amount of time only allowed me to write two methods and they both are not even near perfection.<br>
-・But I guess I am going to procrastinate strategically the implementation of multi split-merge triangulation.<br>
-・The next will be followed by solving some issues and implementing a method at MeshGenerator to accept List<Vector2> vertices and List<List<Vector2[]>> holes to return the finished 2D mesh.<br>
