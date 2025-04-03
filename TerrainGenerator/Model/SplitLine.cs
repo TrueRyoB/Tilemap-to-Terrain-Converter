@@ -44,7 +44,7 @@ namespace Fujin.TerrainGenerator.Model
 
             if (!Calc.IsClockwise(vertices))
             {
-                Debug.LogWarning("please sort vertices so that they are ordered clockwise");
+                Debug.LogWarning("Please ensure to sort vertices so that they are ordered clockwise");
                 vertices.Reverse();
             }
             
@@ -76,13 +76,13 @@ namespace Fujin.TerrainGenerator.Model
                 Vector2 bottomEnd = new Vector2(vertices[0].x, heightRange.x);
                 Vector2 topEnd = new Vector2(vertices[0].x, heightRange.y);
 
-                LeftLine = new List<Vector2> { bottomEnd };
+                LeftLine = new List<Vector2> { topEnd };
                 LeftLine.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, true));
-                LeftLine.Add(topEnd);
+                LeftLine.Add(bottomEnd);
                 
-                RightLine = new List<Vector2> { topEnd };
+                RightLine = new List<Vector2> { bottomEnd };
                 RightLine.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, false));
-                RightLine.Add(bottomEnd);
+                RightLine.Add(topEnd);
             
                 return SetResult.Success;
             }

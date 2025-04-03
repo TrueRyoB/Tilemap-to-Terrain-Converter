@@ -108,7 +108,7 @@ namespace Fujin.TerrainGenerator.System
             List<Vector2> vertices2D = new List<Vector2>(vertices.Length);
             for (int i = 0; i < vertices.Length; i++)
             {
-                vertices2D[i] = new Vector2(vertices[i].x, vertices[i].y);
+                vertices2D.Add(new Vector2(vertices[i].x, vertices[i].y));
             }
             
             if (!TryTriangulate(vertices2D, out List<int> triangles))

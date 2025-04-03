@@ -13,6 +13,7 @@ namespace Fujin.TerrainGenerator.Model
             Success,
             InvalidPoint,
             InvalidMesh,
+            InvalidSplitMesh,
             Failure,
         }
 
@@ -95,25 +96,26 @@ namespace Fujin.TerrainGenerator.Model
                 return SplitResult.InvalidPoint;
             }
             
-            int n = mesh.vertices.Length;
+            Vector3[] verticesOriginal = mesh.vertices;
+            int n = verticesOriginal.Length;
             bool isValidSplitBottom = false;
             bool isValidSplitTop = false;
-
-            Vector2 indices = Vector2.zero;
+            int floorBottom = 0, floorTop = 0;
+            
             for (int i = 0; i < mesh.vertices.Length; ++i)
             {
                 Vector2 pointA = mesh.vertices[i];
                 Vector2 pointB = mesh.vertices[(i + 1) % n];
 
-                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[0], out float r))
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[^1], out float r))
                 {
-                    indices.x = (i + r) % n;
+                    floorBottom = Calc.FloorF((i + r) % n);
                     isValidSplitBottom = true;
                 }
 
-                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[^1], out r))
+                if (Calc.IsPointOnLine(pointA, pointB, splitLine.LeftLine[0], out r))
                 {
-                    indices.y = (i + r) % n;
+                    floorTop = Calc.FloorF((i + r) % n);
                     isValidSplitTop = true;
                 }
 
@@ -128,13 +130,10 @@ namespace Fujin.TerrainGenerator.Model
             try
             {
                 // Swap elements within SplitLine to avoid confusion
-                Vector3[] verticesOriginal = mesh.vertices;
                 splitMesh = new SplitMesh();
             
                 // Try splitting the mesh into two
-                int floorBottom = Calc.FloorF(indices.x);
-                int floorTop = Calc.FloorF(indices.y);
-                
+                Debug.Log("Phase 1 passed");
                 int l = splitLine.LeftLine.Count, r = splitLine.RightLine.Count;
                 int lengthLeft = floorTop - floorBottom + 1 + l;
                 int lengthRight = floorBottom - floorTop + 1 + r;
@@ -142,21 +141,43 @@ namespace Fujin.TerrainGenerator.Model
                 if (floorBottom > floorTop) lengthLeft += n;
                 else lengthRight += n;
                 
+                Debug.Log("Phase 2 passed"); //TODO: cannot pass the phase 3 because now the indices of top and bottom are swapped
                 Vector3[] verticesLeft = new Vector3[lengthLeft];
                 for (int i=0; i < l; ++i) verticesLeft[i] = splitLine.LeftLine[i];
                 for (int i = floorBottom; i < floorTop + n; ++i) verticesLeft[i + l - floorBottom] = verticesOriginal[i % n];
                 
+                Debug.Log("Phase 3 passed");
                 Vector3[] verticesRight = new Vector3[lengthRight];
                 for (int i=0; i < r; ++i) verticesRight[i] = splitLine.RightLine[i];
                 for (int i = floorTop; i < floorBottom; ++i) verticesRight[i + r - floorTop] = verticesOriginal[i%n];
 
-                splitMesh.AssignMesh(MeshGenerator.CreateMeshFromVertices(verticesLeft), MeshGenerator.CreateMeshFromVertices(verticesRight));
+                Debug.Log("Phase 4 passed");
+                if (!Calc.IsClockwise(verticesLeft) || !Calc.IsClockwise(verticesRight))
+                {
+                    return SplitResult.InvalidPoint;
+                }
+                Debug.Log("Phase 5 passed");
+
+                for (int i = 0; i < lengthLeft; ++i)
+                {
+                    Debug.Log($"verticesLeft[{i}]: {verticesLeft[i]}");
+                }
+
+                Mesh leftMesh = MeshGenerator.CreateMeshFromVertices(verticesLeft);
+                Mesh rightMesh = MeshGenerator.CreateMeshFromVertices(verticesRight);
+
+                if (leftMesh == null || rightMesh == null)
+                {
+                    return SplitResult.InvalidSplitMesh;
+                }
+
+                splitMesh.AssignMesh(leftMesh, rightMesh);
+                Debug.Log("Final Phase passed");
                 return SplitResult.Success;
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Split failed: {ex.Message}");
-                Debug.Log($"floorBottom: {Calc.FloorF(indices.x)}, floorTop: {Calc.FloorF(indices.y)}, l = {splitLine.LeftLine.Count}, r = {splitLine.RightLine.Count}");
                 return SplitResult.Failure;
             }
         }
