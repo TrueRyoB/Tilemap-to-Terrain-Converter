@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.Collections.Generic;
 using Fujin.TerrainGenerator.Test;
+using Fujin.TerrainGenerator.Utility;
 
 namespace Fujin.TerrainGenerator.System
 {
@@ -151,24 +152,28 @@ namespace Fujin.TerrainGenerator.System
             _mostRecent3DMap.AddComponent<VoluntaryRotation>();
             Debug.Log("Created a box!");
         }
+
+        private readonly List<Vector2> _simplified = new List<Vector2>()
+        {
+            // new Vector2(1, 0),
+            // new Vector2(0, 1),
+            // new Vector2(0, 2),
+            // new Vector2(0, 3),
+            // new Vector2(1, 3),
+            new Vector2(1, 3),
+            new Vector2(0, 3),
+            new Vector2(0, 2),
+            new Vector2(0, 1),
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+        };
         
         public void FactCheck()
         {
-            if (MeshGenerator.CreateMeshFromVertices(_cheeseOutline) == null)
-            {
-                Debug.LogError("Cheese outline is not authentic");
-                return;
-            }
-
-            foreach (var hole in _cheeseHoles)
-            {
-                if (MeshGenerator.CreateMeshFromVertices(hole) == null)
-                {
-                    Debug.LogError("More than one of cheese holes are not authentic");
-                    return;
-                }
-            }
-            Debug.Log("Both are authentic");
+            UnityEngine.Vector2[] testo = Calc.Simplify(_simplified.ToArray());
+            
+            for(int i =0; i < testo.Length; i++) Debug.Log($"testo[{i}]: {testo[i]}");
+            // Debug.Log("Set off");
         }
 
         private void CreateBlock(List<Vector2> contour, List<List<Vector2>> holes, float depth, out GameObject block)

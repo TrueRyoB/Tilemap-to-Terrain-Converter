@@ -100,8 +100,6 @@ namespace Fujin.TerrainGenerator.Utility
             for (int i = stack.Count - 1; i >= 0; --i) result[i] = Convert23(stack.Pop());
             return result;
         }
-        
-        private static Vector3 Convert23(Vector4 v) => new Vector3(v.x, v.y, 0);
 
         public static Vector2[] Simplify(Vector2[] vertices)
         {
@@ -133,6 +131,8 @@ namespace Fujin.TerrainGenerator.Utility
             for (int i = count - 1; i >= 0; --i) result[i] = stack.Pop();
             return result;
         }
+        
+        private static Vector3 Convert23(Vector4 v) => new Vector3(v.x, v.y, 0);
 
         private static void GetDirection(Vector4 a, Vector2 b, ref Vector2 res)
         {
@@ -142,7 +142,7 @@ namespace Fujin.TerrainGenerator.Utility
             res.Normalize();
         }
         
-        private static bool SameDirection(Vector4 v1, Vector2 v2) => OnSameLine(new Vector2(v1.z, v1.w), new Vector2(v1.x, v1.y) - v2);
+        private static bool SameDirection(Vector4 v4, Vector2 newDir) => OnSameLine(new Vector2(v4.z, v4.w), newDir);
 
         private static bool SamePosition(Vector4 v1, Vector2 v2) => SameFloat(v1.x, v2.x) && SameFloat(v1.y, v2.y);
         
@@ -166,7 +166,7 @@ namespace Fujin.TerrainGenerator.Utility
         {
             if (crossedPoints.Count > 2 || crossedPoints.Count == 0)
             {
-                Debug.LogError("This function is designed to work only for the length of 1 or 2!!");
+                //Debug.LogError("This function is designed to work only for the length of 1 or 2!!");
                 return vertices;
             }
             

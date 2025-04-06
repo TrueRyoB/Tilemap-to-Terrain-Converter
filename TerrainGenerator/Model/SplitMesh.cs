@@ -127,6 +127,7 @@ namespace Fujin.TerrainGenerator.Model
             
             if (!isValidSplitBottom || !isValidSplitTop)
             {
+                foreach (var v in mesh.vertices) Debug.LogWarning(v);
                 return SplitResult.InvalidPoint;
             }
 
@@ -169,19 +170,11 @@ namespace Fujin.TerrainGenerator.Model
                 {
                     return SplitResult.InvalidPoint;
                 }
-
-                for (int i = 0; i < lengthLeft; ++i) Debug.LogWarning($"verticesLeft[{i}] = {verticesLeft[i]}");
                 
                 Mesh leftMesh = MeshGenerator.CreateMeshFromVertices(verticesLeft);
-                
-                for(int i=0; i < lengthRight; ++i) Debug.LogWarning($"verticesRight[{i}] = {verticesRight[i]}");
-                
                 Mesh rightMesh = MeshGenerator.CreateMeshFromVertices(verticesRight);
 
-                if (leftMesh == null || rightMesh == null)
-                {
-                    return SplitResult.InvalidSplitMesh;
-                }
+                if (leftMesh == null || rightMesh == null) return SplitResult.InvalidSplitMesh;
 
                 splitMesh.AssignMesh(leftMesh, rightMesh);
                 Debug.Log("Final Phase passed");

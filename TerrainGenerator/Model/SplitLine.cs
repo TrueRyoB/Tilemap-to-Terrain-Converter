@@ -7,8 +7,8 @@ namespace Fujin.TerrainGenerator.Model
 {
     public class SplitLine
     {
-        public List<Vector2> LeftLine { get; private set; }
-        public List<Vector2> RightLine { get; private set; }
+        public Vector3[] LeftLine { get; private set; }
+        public Vector3[] RightLine { get; private set; }
         private readonly Param _param;
             
         public enum Param
@@ -26,7 +26,7 @@ namespace Fujin.TerrainGenerator.Model
             Failure,
         }
 
-        public bool IsValid() => LeftLine != null && RightLine != null && LeftLine.Count >= 2 && RightLine.Count >= 2 && LeftLine[0] == RightLine[^1] && LeftLine[^1] == RightLine[0];
+        public bool IsValid() => LeftLine != null && RightLine != null && LeftLine.Length>= 2 && RightLine.Length >= 2 && LeftLine[0] == RightLine[^1] && LeftLine[^1] == RightLine[0];
         
         public SetResult TrySetLine(List<Vector2> vertices, Vector2 heightRange)
         {
@@ -58,7 +58,6 @@ namespace Fujin.TerrainGenerator.Model
                 List<Vector2> maxAndMin = Calc.FilterByMostTwo(vertices);
                 if (maxAndMin[0].y < heightRange.x || maxAndMin[1].y > heightRange.y)
                 {
-                    // Debug.Log($"Hole range: ({maxAndMin[0].y}, {maxAndMin[1].y}), Given heightRange: ({heightRange.x}, {heightRange.y})");
                     return SetResult.InvalidHeightRange;
                 }
             }
@@ -67,22 +66,20 @@ namespace Fujin.TerrainGenerator.Model
             {
                 List<Vector3> crossedPoints = Calc.FilterByMostTwo(Calc.FindPointsOnContour(vertices, vertices[0].x));
 
-                if (crossedPoints.Count == 0)
-                {
-                    Debug.LogError("FindPointsContour should never yield 0 for this use!! Something is wrong");
-                    return SetResult.InvalidMethod;
-                }
+                if (crossedPoints.Count == 0) return SetResult.InvalidMethod;
                 
                 Vector2 bottomEnd = new Vector2(vertices[0].x, heightRange.x);
                 Vector2 topEnd = new Vector2(vertices[0].x, heightRange.y);
 
-                LeftLine = new List<Vector2> { topEnd };
-                LeftLine.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, true));
-                LeftLine.Add(bottomEnd);
+                List<Vector2> tempLeft = new List<Vector2> { topEnd };
+                tempLeft.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, true));
+                tempLeft.Add(bottomEnd);
+                LeftLine = Calc.Simplify(tempLeft);
                 
-                RightLine = new List<Vector2> { bottomEnd };
-                RightLine.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, false));
-                RightLine.Add(topEnd);
+                List<Vector2> tempRight = new List<Vector2> { bottomEnd };
+                tempRight.AddRange(Calc.GetSplitVertices(vertices, crossedPoints, false));
+                tempRight.Add(topEnd);
+                RightLine = Calc.Simplify(tempRight);
             
                 return SetResult.Success;
             }

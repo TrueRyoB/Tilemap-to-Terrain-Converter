@@ -57,6 +57,8 @@ namespace Fujin.TerrainGenerator.System
                     Debug.LogError($"Error occured at TryMerge: {res}");
                     return null;
                 }
+
+                Debug.Log("Successfully punched a hole!");
             }
             
             return baseMesh;
