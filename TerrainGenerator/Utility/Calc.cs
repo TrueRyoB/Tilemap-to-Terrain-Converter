@@ -54,7 +54,8 @@ namespace Fujin.TerrainGenerator.Utility
         }
         
         public static bool SameVector(Vector3 v3, Vector2 v2) => SameFloat(v3.x, v2.x) && SameFloat(v3.y, v2.y);
-        
+
+        // Unfixed
         public static List<Vector2> GetSplitVertices(List<Vector2> vertices ,List<Vector3> crossedPoints, bool isLeft)
         {
             if (crossedPoints.Count > 2 || crossedPoints.Count == 0)
