@@ -121,6 +121,9 @@ namespace Fujin.TerrainGenerator.Model
 
                 if (isValidSplitBottom && isValidSplitTop) break;
             }
+
+            int ceilBottom = (floorBottom + 1) % n;
+            int ceilTop = (floorTop + 1) % n;
             
             if (!isValidSplitBottom || !isValidSplitTop)
             {
@@ -133,37 +136,46 @@ namespace Fujin.TerrainGenerator.Model
                 splitMesh = new SplitMesh();
             
                 // Try splitting the mesh into two
-                Debug.Log("Phase 1 passed");
-                int l = splitLine.LeftLine.Count, r = splitLine.RightLine.Count;
-                int lengthLeft = floorTop - floorBottom + 1 + l;
-                int lengthRight = floorBottom - floorTop + 1 + r;
+                int l = splitLine.LeftLine.Length, r = splitLine.RightLine.Length;
+                int lengthLeft = floorTop - ceilBottom + 1 + l;
+                int lengthRight = floorBottom - ceilTop + 1 + r;
                 
-                if (floorBottom > floorTop) lengthLeft += n;
-                else lengthRight += n;
+                if (ceilBottom > floorTop) lengthLeft += n;
+                if (ceilTop > floorBottom) lengthRight += n;
                 
-                Debug.Log("Phase 2 passed"); //TODO: cannot pass the phase 3 because now the indices of top and bottom are swapped
                 Vector3[] verticesLeft = new Vector3[lengthLeft];
-                for (int i=0; i < l; ++i) verticesLeft[i] = splitLine.LeftLine[i];
-                for (int i = floorBottom; i < floorTop + n; ++i) verticesLeft[i + l - floorBottom] = verticesOriginal[i % n];
+                Array.Copy(splitLine.LeftLine, 0, verticesLeft, 0, l);
+                if (ceilBottom > floorTop)
+                {
+                    for (int i = ceilBottom; i <= floorTop + n; ++i) verticesLeft[i + l - ceilBottom] = verticesOriginal[i % n];
+                }
+                else
+                {
+                    for (int i = ceilBottom; i <= floorTop; ++i) verticesLeft[i + l - ceilBottom] = verticesOriginal[i % n];
+                }
                 
-                Debug.Log("Phase 3 passed");
                 Vector3[] verticesRight = new Vector3[lengthRight];
-                for (int i=0; i < r; ++i) verticesRight[i] = splitLine.RightLine[i];
-                for (int i = floorTop; i < floorBottom; ++i) verticesRight[i + r - floorTop] = verticesOriginal[i%n];
+                Array.Copy(splitLine.RightLine, 0, verticesRight, 0, r);
+                if (ceilTop > floorBottom)
+                {
+                    for (int i = ceilTop; i <= floorBottom + n; ++i) verticesRight[i + r - ceilTop] = verticesOriginal[i % n];
+                }
+                else
+                {
+                    for (int i = ceilTop; i <= floorBottom; ++i) verticesRight[i + r - ceilTop] = verticesOriginal[i];
+                }
 
-                Debug.Log("Phase 4 passed");
                 if (!Calc.IsClockwise(verticesLeft) || !Calc.IsClockwise(verticesRight))
                 {
                     return SplitResult.InvalidPoint;
                 }
-                Debug.Log("Phase 5 passed");
 
-                for (int i = 0; i < lengthLeft; ++i)
-                {
-                    Debug.Log($"verticesLeft[{i}]: {verticesLeft[i]}");
-                }
-
+                for (int i = 0; i < lengthLeft; ++i) Debug.LogWarning($"verticesLeft[{i}] = {verticesLeft[i]}");
+                
                 Mesh leftMesh = MeshGenerator.CreateMeshFromVertices(verticesLeft);
+                
+                for(int i=0; i < lengthRight; ++i) Debug.LogWarning($"verticesRight[{i}] = {verticesRight[i]}");
+                
                 Mesh rightMesh = MeshGenerator.CreateMeshFromVertices(verticesRight);
 
                 if (leftMesh == null || rightMesh == null)
