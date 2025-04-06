@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 namespace Fujin.TerrainGenerator.Utility
 {
@@ -52,10 +53,115 @@ namespace Fujin.TerrainGenerator.Utility
             
             return new List<Vector2> { min, max };
         }
-        
-        public static bool SameVector(Vector3 v3, Vector2 v2) => SameFloat(v3.x, v2.x) && SameFloat(v3.y, v2.y);
 
-        // Unfixed
+        public static Vector2[] SkipSameElement(Vector2[] vertices)
+        {
+            if (vertices.Length == 0) return vertices;
+
+            int writeIndex = 1;
+            for (int readIndex = 1; readIndex < vertices.Length; readIndex++)
+            {
+                if (vertices[readIndex] != vertices[readIndex - 1])
+                {
+                    vertices[writeIndex++] = vertices[readIndex];
+                }
+            }
+
+            Array.Resize(ref vertices, writeIndex);
+            return vertices;
+        }
+
+        public static Vector3[] Simplify(List<Vector2> vertices)
+        {
+            Stack<Vector4> stack = new Stack<Vector4>();
+            Vector2 tempVec = Vector2.zero;
+
+            foreach (var v in vertices)
+            {
+                int c = stack.Count;
+                if (c == 0)
+                {
+                    stack.Push(new Vector4(v.x, v.y, 0, 0));
+                    continue;
+                }
+                if (SamePosition(stack.Peek(), v))
+                {
+                    continue;
+                }
+                GetDirection(stack.Peek(), v, ref tempVec);
+                while (SameDirection(stack.Peek(), tempVec))
+                {
+                    stack.Pop();
+                    GetDirection(stack.Peek(), v, ref tempVec);
+                }
+                stack.Push(new Vector4(v.x, v.y, tempVec.x, tempVec.y));
+            }
+            Vector3[] result = new Vector3[stack.Count];
+            for (int i = stack.Count - 1; i >= 0; --i) result[i] = Convert23(stack.Pop());
+            return result;
+        }
+        
+        private static Vector3 Convert23(Vector4 v) => new Vector3(v.x, v.y, 0);
+
+        public static Vector2[] Simplify(Vector2[] vertices)
+        {
+            Stack<Vector4> stack = new Stack<Vector4>();
+            Vector2 tempVec = Vector2.zero;
+
+            foreach (var v in vertices)
+            {
+                if (stack.Count == 0)
+                {
+                    stack.Push(new Vector4(v.x, v.y, 0, 0));
+                    continue;
+                }
+                if (SamePosition(stack.Peek(), v))
+                {
+                    continue;
+                }
+                GetDirection(stack.Peek(), v, ref tempVec);
+                while (SameDirection(stack.Peek(), tempVec))
+                {
+                    stack.Pop();
+                    GetDirection(stack.Peek(), v, ref tempVec);
+                }
+                stack.Push(new Vector4(v.x, v.y, tempVec.x, tempVec.y));
+            }
+
+            int count = stack.Count;
+            Vector2[] result = new Vector2[count];
+            for (int i = count - 1; i >= 0; --i) result[i] = stack.Pop();
+            return result;
+        }
+
+        private static void GetDirection(Vector4 a, Vector2 b, ref Vector2 res)
+        {
+            if (res == null) res = Vector2.zero;
+            res.x = a.x - b.x;
+            res.y = a.y - b.y;
+            res.Normalize();
+        }
+        
+        private static bool SameDirection(Vector4 v1, Vector2 v2) => OnSameLine(new Vector2(v1.z, v1.w), new Vector2(v1.x, v1.y) - v2);
+
+        private static bool SamePosition(Vector4 v1, Vector2 v2) => SameFloat(v1.x, v2.x) && SameFloat(v1.y, v2.y);
+        
+        private static bool OnSameLine(Vector2 v1, Vector2 v2)
+        {
+            if (v1 == Vector2.zero || v2 == Vector2.zero) return false;
+            if (v1.x == 0 && v2.x == 0 || v1.y == 0 && v2.y == 0) return true;
+            
+            float crossProduct = v1.x * v2.y - v1.y * v2.x;
+            if (Mathf.Abs(crossProduct) > 1e-6f) return false;
+
+            float kX = (v1.x != 0) ? (v2.x / v1.x) : (v2.y / v1.y);
+            float kY = (v1.y != 0) ? (v2.y / v1.y) : (v2.x / v1.x);
+
+            return Mathf.Abs(kX - kY) < 1e-6f;
+        }
+        
+        private static bool SameVector(Vector3 v3, Vector2 v2) => SameFloat(v3.x, v2.x) && SameFloat(v3.y, v2.y);
+        
         public static List<Vector2> GetSplitVertices(List<Vector2> vertices ,List<Vector3> crossedPoints, bool isLeft)
         {
             if (crossedPoints.Count > 2 || crossedPoints.Count == 0)
@@ -65,7 +171,7 @@ namespace Fujin.TerrainGenerator.Utility
             }
             
             int n = vertices.Count;
-            int startIndex = CeilF(isLeft ? crossedPoints[^1].z : crossedPoints[0].z);
+            int startIndex = CeilF(isLeft ? crossedPoints[^1].z : crossedPoints[0].z); // max y vs min y
             int endIndex = FloorF(isLeft ? crossedPoints[0].z : crossedPoints[^1].z);
             Vector3 head = isLeft ? crossedPoints[^1] : crossedPoints[0];
             Vector3 tail = isLeft ? crossedPoints[0] : crossedPoints[^1];
@@ -75,19 +181,14 @@ namespace Fujin.TerrainGenerator.Utility
             // Return already if there exists only a single element
             if (isLeft && crossedPoints.Count == 1) return result;
             
-            if (endIndex < startIndex) endIndex += n;
+            if (endIndex > startIndex) startIndex += n;
 
-            for (int i = startIndex; i <= endIndex; i++)
+            for (int i = startIndex; i >= endIndex; --i)
             {
                 result.Add(vertices[i % n]);
             }
             
             if (!SameVector(tail, vertices[endIndex%n])) result.Add(tail);
-
-            // for (int i = 0; i < result.Count; ++i)
-            // {
-            //     Debug.LogWarning($"result[{i}]: {result[i]}");
-            // }
             
             return result;
         }
@@ -168,7 +269,7 @@ namespace Fujin.TerrainGenerator.Utility
             return sum > 0;
         }
 
-        public static bool SameFloat(float f, float f2) => Mathf.Abs(f - f2) < 0.001f;
+        private static bool SameFloat(float f, float f2) => Mathf.Abs(f - f2) < 0.001f;
         
         public static int FloorF(float f) => (int)Mathf.Floor(f);
         private static int CeilF(float f) => (int)Mathf.Ceil(f);
