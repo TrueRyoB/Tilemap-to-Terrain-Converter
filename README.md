@@ -1,6 +1,5 @@
 # Le Pain
-I am too tired to debug today so let me leave a screnshot here instead.[EFFECTIVE PROCRASTINATION] <br>
-<img src="https://github.com/TrueRyoB/Tilemap-to-Terrain-Converter/blob/main/photos%20for%20readme/error%20april%201st.png" width="800px"><br>
+Detail is omitted. Behold for a further update!<br>
 
 # About
 This is an editor tool to efficiently create terrain for 3D platformer game for Unity by scanning through an assigned tilemap.<br><br>
